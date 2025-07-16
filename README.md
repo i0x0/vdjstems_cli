@@ -4,6 +4,18 @@
 
 This is basically a tool I made to help extract stems for music that I use to DJ. (and also a quick read on anyone whos interested in where most stem seperation tools work)
 
+# Requirements
+
+* Python 3.6+
+* FFmpeg
+* Definitely a good GPU or CPU (CPU is slower but works)
+
+# How to use
+```
+pip install -r requirements.txt
+python
+```
+
 # Context
 
 * Have a terrible GPU on my desktop (1050 Ti)
@@ -25,3 +37,8 @@ This is basically a tool I made to help extract stems for music that I use to DJ
   * ![object_2](imgs/object_2.png)
     * its just a audio file with different audio channels (more precisely a MPEG-4 AAC Matroska file at 48.00 kHz) 🤦
       * i honestly thought it was encoded different but yk (✨ dont reinvent the wheel ✨)
+    * "i can easily do this myself with a python script"
+
+# Warning
+* This project is not affiliated with Image-Line or VirtualDJ.
+* Yes, I used Claude. (only bc idk how to write python)
