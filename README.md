@@ -1,4 +1,4 @@
-`vdjstems_cli` - idek i cant come up with any good names
+# `vdjstems_cli` - idek i cant come up with any good names
 
 # Explanation
 
@@ -13,7 +13,7 @@ This is basically a tool I made to help extract stems for music that I use to DJ
 # How to use
 ```
 pip install -r requirements.txt
-python
+python vdjstems.py
 ```
 
 # Context
