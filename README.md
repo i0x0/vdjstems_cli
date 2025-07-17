@@ -6,17 +6,22 @@ This is basically a tool I made to help extract stems for music that I use to DJ
 
 # Requirements
 
-* Python 3.6+
+* Python 3.6+ (3.13.3 seems to work the best)
 * FFmpeg
 * Definitely a good GPU or CPU (CPU is slower but works)
 
-# How to use
+# Fetch Dependencies
 ```
 pip install -r requirements.txt
-python vdjstems.py
+```
+Also if you have a NVIDIA GPU (CUDA) or a AMD GPU (ROCm) (idk abt Intel GPUs ¯\_(ツ)_/¯ ) go [here](https://pytorch.org/get-started/locally/) and paste the command it gives you (needed to better performance)
+
+# How to use
+```
+python vdjstems.py [audio files or folder(s))] -o [output folder] -m [model]
 ```
 
-# Context
+## Context (for this project)
 
 * Have a terrible GPU on my desktop (1050 Ti)
   * its better than my laptop (MX350)
@@ -41,4 +46,4 @@ python vdjstems.py
 
 # Warning
 * This project is not affiliated with Image-Line or VirtualDJ.
-* Yes, I used Claude. (only bc idk how to write python)
+* May not work on all songs or audio files.

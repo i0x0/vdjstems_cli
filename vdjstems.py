@@ -59,23 +59,29 @@ def find_audio_files(paths: List[str]) -> List[str]:
     return audio_files
 
 def create_vdjstems(audio_files: List[str], output_file: str, track_names: List[str]) -> None:
+    # print(f"opt: {output_file}")
     """Create VDJ stems file from audio tracks."""
+    # print(f"audio: {audio_files}")
+    # print(f"output_file: {output_file}")
+    # print(f"track_names: {track_names}")
     # Get duration from first audio file for empty track
     probe = ffmpeg.probe(audio_files[0], v='quiet')
     duration = float(probe['streams'][0]['duration'])
 
-    # Create input streams for existing audio files
-    inputs = []
-    for audio_file in audio_files:
-        inputs.append(ffmpeg.input(audio_file))
-
-    # Process track names - rename "drums" to "kick"
+    # Process track names - rename "drums" to "kick" BEFORE creating inputs
     processed_track_names = []
     for name in track_names:
+        # print(f"Processing track name: {name}")
         if name.lower() == "drums":
             processed_track_names.append("kick")
         else:
             processed_track_names.append(name)
+    # print("3")
+    # print(track)
+    # Create input streams for existing audio files (in the same order as track_names)
+    inputs = []
+    for audio_file in audio_files:
+        inputs.append(ffmpeg.input(audio_file))
 
     # Add empty hihat track
     silent_input = ffmpeg.input(
@@ -93,10 +99,15 @@ def create_vdjstems(audio_files: List[str], output_file: str, track_names: List[
         'ab': '192k'  # Bitrate
     }
 
-    # Create metadata for track names
+    # Create metadata for track names - this order must match the inputs order
+    # print("1")
+    # print(processed_track_names)
     metadata = {}
     for i, name in enumerate(processed_track_names):
         metadata[f'metadata:s:a:{i}'] = f'title={name}'
+    # print("1")
+    # print(metadata)
+    # print(f"Track mapping: {list(zip(audio_files + ['silent_hihat'], processed_track_names))}")
 
     output = ffmpeg.output(
         *inputs,
@@ -161,7 +172,6 @@ def write_stems_batch(stems_data: List[Tuple[np.ndarray, str, str]], sr: int) ->
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(write_single_stem, data) for data in stems_data]
         return [future.result() for future in as_completed(futures)]
-
 def process_single_file(args_tuple: Tuple[str, str, str, str, bool]) -> Optional[str]:
     """Process a single audio file - designed for multiprocessing."""
     file_path, output_dir, model_name, temp_base_dir, use_cuda = args_tuple
@@ -194,7 +204,7 @@ def process_single_file(args_tuple: Tuple[str, str, str, str, bool]) -> Optional
         # Extract stems (order is important for demucs)
         drums, bass, other, vocals = sources[0]
 
-        # Convert to numpy for faster I/O
+        # Convert to numpy and define the order we want
         stems_numpy = [
             (vocals.cpu().numpy(), 'vocals.wav', 'vocal'),
             (drums.cpu().numpy(), 'drums.wav', 'drums'),
@@ -202,15 +212,18 @@ def process_single_file(args_tuple: Tuple[str, str, str, str, bool]) -> Optional
             (other.cpu().numpy(), 'instrumental.wav', 'instruments')
         ]
 
-        # Write stems in parallel
+        # Write stems and maintain order
         temp_files = []
         track_names = []
 
-        stems_data = [(data, filename, process_temp_dir) for data, filename, _ in stems_numpy]
-        temp_files = write_stems_batch(stems_data, sr)
-        track_names = [name for _, _, name in stems_numpy]
+        # Process each stem in the defined order
+        for audio_data, filename, track_name in stems_numpy:
+            stem_file_path = os.path.join(process_temp_dir, filename)
+            sf.write(stem_file_path, audio_data.T, sr)
+            temp_files.append(stem_file_path)
+            track_names.append(track_name)
 
-        # Create output file
+        # Create output file (use original input file name)
         output_file = os.path.join(output_dir, f"{Path(file_path).stem}.mkv")
         create_vdjstems(temp_files, output_file, track_names)
 
@@ -372,7 +385,7 @@ def main():
     progress_bar.close()
 
     # Final summary
-    print(f"\nProcessing completed!")
+    print("\nProcessing completed!")
     print(f"Successfully processed: {len(successful_files)} files")
     if failed_files:
         print(f"Failed to process: {len(failed_files)} files")
