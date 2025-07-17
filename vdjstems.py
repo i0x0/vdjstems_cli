@@ -20,6 +20,44 @@ import threading
 
 temp_dir = ".vdjstems_temp"
 
+# Supported audio file extensions
+AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aiff', '.au', '.mp4'}
+
+def find_audio_files(paths: List[str]) -> List[str]:
+    """Find all audio files from given paths (files or directories)."""
+    audio_files = []
+
+    for path in paths:
+        path_obj = Path(path)
+
+        if path_obj.is_file():
+            # Check if it's an audio file
+            if path_obj.suffix.lower() in AUDIO_EXTENSIONS:
+                audio_files.append(str(path_obj))
+            else:
+                print(f"Skipping non-audio file: {path_obj.name}")
+        elif path_obj.is_dir():
+            # Recursively find audio files in directory
+            found_files = []
+            for ext in AUDIO_EXTENSIONS:
+                found_files.extend(path_obj.rglob(f'*{ext}'))
+                found_files.extend(path_obj.rglob(f'*{ext.upper()}'))
+
+            # Convert to strings and add to list
+            dir_audio_files = [str(f) for f in found_files]
+            audio_files.extend(dir_audio_files)
+
+            if dir_audio_files:
+                print(f"Found {len(dir_audio_files)} audio files in {path}")
+            else:
+                print(f"No audio files found in {path}")
+        else:
+            print(f"Path not found: {path}")
+
+    # Remove duplicates and sort
+    audio_files = sorted(list(set(audio_files)))
+    return audio_files
+
 def create_vdjstems(audio_files: List[str], output_file: str, track_names: List[str]) -> None:
     """Create VDJ stems file from audio tracks."""
     # Get duration from first audio file for empty track
@@ -212,7 +250,8 @@ def main():
     parser.add_argument('-j', "--jobs", help="number of parallel jobs", type=int, default=0)
     parser.add_argument('--no-cuda', help="disable CUDA", action="store_true")
     parser.add_argument('--force', help="force processing even if output exists", action="store_true")
-    parser.add_argument('files', nargs='*')
+    parser.add_argument('-r', "--recursive", help="recursively search directories for audio files", action="store_true")
+    parser.add_argument('paths', nargs='*', help='audio files or directories to process')
 
     args = parser.parse_args()
 
@@ -221,21 +260,44 @@ def main():
         print(f"torch.cuda.is_available(): {torch.cuda.is_available()}")
         print(f"CPU count: {mp.cpu_count()}")
         print(f"Memory: {psutil.virtual_memory().total / (1024**3):.1f}GB")
+        print(f"Supported audio extensions: {', '.join(sorted(AUDIO_EXTENSIONS))}")
         return
 
-    if not args.files:
-        print("No files provided")
+    if not args.paths:
+        print("No files or directories provided")
         return
+
+    # Find all audio files from the provided paths
+    print("Scanning for audio files...")
+    audio_files = find_audio_files(args.paths)
+
+    if not audio_files:
+        print("No audio files found!")
+        return
+
+    print(f"Found {len(audio_files)} audio files")
+
+    # Show some examples of found files
+    if len(audio_files) <= 10:
+        print("Files to process:")
+        for f in audio_files:
+            print(f"  - {Path(f).name}")
+    else:
+        print("Sample of files to process:")
+        for f in audio_files[:5]:
+            print(f"  - {Path(f).name}")
+        print(f"  ... and {len(audio_files) - 5} more")
+    print()
 
     # Create output directory
     os.makedirs(args.output, exist_ok=True)
 
     # Filter files to process (skip existing unless --force)
     if args.force:
-        files_to_process = args.files
+        files_to_process = audio_files
         skipped_files = []
     else:
-        files_to_process, skipped_files = filter_files_to_process(args.files, args.output)
+        files_to_process, skipped_files = filter_files_to_process(audio_files, args.output)
 
     # Show skip information
     if skipped_files:

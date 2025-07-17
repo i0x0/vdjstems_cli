@@ -2,3 +2,5 @@ demucs==4.0.1
 librosa==0.11.0
 ffmpeg-python==0.2.0
 psutil==7.0.0
+diffq==0.2.4
+resampy==0.4.3
